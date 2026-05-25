@@ -31,7 +31,7 @@
 using namespace mlir;
 using namespace triton;
 
-#define GEN_PASS_CLASSES
+// GEN_PASS_DECL is now in Passes.h header
 #include "triton-shared/Conversion/TritonArithToLinalg/Passes.h.inc"
 
 void mlir::triton::populateTritonArithToLinalgCanonicalizationPatterns(

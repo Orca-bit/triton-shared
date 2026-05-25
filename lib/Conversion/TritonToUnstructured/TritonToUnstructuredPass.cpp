@@ -177,8 +177,13 @@
 using namespace mlir;
 using namespace triton;
 
-#define GEN_PASS_CLASSES
+namespace mlir {
+namespace triton {
+#define GEN_PASS_DECL
+#define GEN_PASS_DEF_TRITONTOUNSTRUCTURED
 #include "triton-shared/Conversion/TritonToUnstructured/Passes.h.inc"
+} // namespace triton
+} // namespace mlir
 
 namespace {
 
@@ -217,7 +222,7 @@ static unsigned int getBitWidth(Type type) {
 }
 
 class TritonToUnstructuredPass
-    : public TritonToUnstructuredBase<TritonToUnstructuredPass> {
+    : public mlir::triton::impl::TritonToUnstructuredBase<TritonToUnstructuredPass> {
 
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -245,7 +250,7 @@ public:
     llvm::DenseMap<Value, PtrOffset> offsetMap;
     std::queue<Value> workList;
 
-    getOperation().walk([&](FunctionOpInterface func) {
+    this->getOperation().walk([&](FunctionOpInterface func) {
       for (auto arg : func.getArguments()) {
         if (!triton::isPtrTypeLike(arg.getType())) {
           continue;
@@ -254,7 +259,7 @@ public:
         OpBuilder b(func->getRegion(0));
         Value zero = b.create<arith::ConstantOp>(
             arg.getLoc(),
-            b.getIntegerAttr(IntegerType::get(&getContext(), defaultBitWidth),
+            b.getIntegerAttr(IntegerType::get(&this->getContext(), defaultBitWidth),
                              0));
 
         ptrArgs.insert(arg);
@@ -263,7 +268,7 @@ public:
       }
     });
 
-    getOperation().walk([&](triton::IntToPtrOp op) {
+    this->getOperation().walk([&](triton::IntToPtrOp op) {
       // We only want to handle single source pointer,
       // skip if this op produces tensor of pointers
       if (isa<RankedTensorType>(op.getType())) {
@@ -273,7 +278,7 @@ public:
       OpBuilder b(op);
       Value zero = b.create<arith::ConstantOp>(
           op.getLoc(),
-          b.getIntegerAttr(IntegerType::get(&getContext(), defaultBitWidth),
+          b.getIntegerAttr(IntegerType::get(&this->getContext(), defaultBitWidth),
                            0));
 
       offsetMap.insert({res, {res, res.getType(), defaultBitWidth, zero}});
@@ -573,17 +578,17 @@ public:
 
   void runOnOperation() override {
     if (failed(processUnstructuredPtrs(offsetBitWidth))) {
-      getOperation()->emitWarning(
+      this->getOperation()->emitWarning(
           "Cannot transform tensor of pointers into a single base pointer "
           "with tensor of offsets");
       return;
     }
 
-    PassManager pm(&getContext(), getOperation().getOperationName());
+    PassManager pm(&this->getContext(), this->getOperation().getOperationName());
     pm.addPass(createCanonicalizerPass());
     pm.addPass(createCSEPass());
-    if (failed(runPipeline(pm, getOperation()))) {
-      signalPassFailure();
+    if (failed(runPipeline(pm, this->getOperation()))) {
+      this->signalPassFailure();
     }
   }
 };

@@ -19,7 +19,7 @@
 using namespace mlir;
 using namespace triton;
 
-#define GEN_PASS_CLASSES
+// GEN_PASS in header
 #include "triton-shared/Conversion/TritonToLinalg/Passes.h.inc"
 
 void mlir::triton::populateTritonToLinalgCanonicalizationPatterns(

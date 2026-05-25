@@ -42,7 +42,7 @@
 
 using namespace mlir;
 
-#define GEN_PASS_CLASSES
+// GEN_PASS in header
 #include "triton-shared/Conversion/TritonArithToLinalg/Passes.h.inc"
 
 static const std::string WRAP_SIDE_BY_SIDE = "wrap_side_by_side";

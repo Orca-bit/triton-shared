@@ -16,12 +16,16 @@
 using namespace mlir;
 using namespace triton;
 
-#define GEN_PASS_CLASSES
+namespace mlir {
+namespace triton {
+#define GEN_PASS_DEF_ADDLLVMDEBUGINFO
 #include "triton-shared/Transform/AddLLVMDebugInfo/Passes.h.inc"
+} // namespace triton
+} // namespace mlir
 
 namespace {
 
-class AddLLVMDebugInfoPass : public AddLLVMDebugInfoBase<AddLLVMDebugInfoPass> {
+class AddLLVMDebugInfoPass : public mlir::triton::impl::AddLLVMDebugInfoBase<AddLLVMDebugInfoPass> {
 
   static LLVM::DISubprogramFlags setSubprogramFlags(FuncOp funcOp) {
     LLVM::DISubprogramFlags subprogramFlags = LLVM::DISubprogramFlags{};
@@ -46,8 +50,8 @@ public:
   }
 
   void runOnOperation() override {
-    ModuleOp moduleOp = getOperation();
-    MLIRContext *context = &getContext();
+    ModuleOp moduleOp = this->getOperation();
+    MLIRContext *context = &this->getContext();
     Builder builder(context);
     SymbolTable symbolTable(moduleOp);
 
@@ -73,7 +77,7 @@ public:
         // kernel if this loc is a different type, error out
         moduleOp->emitError("invalid #loc attributes for pass ")
             << this->getName().str();
-        return signalPassFailure();
+        return this->signalPassFailure();
       }
 
       // initialize useful attributes

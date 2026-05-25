@@ -37,9 +37,6 @@
 using namespace mlir;
 using namespace triton;
 
-#define GEN_PASS_CLASSES
-#include "triton-shared/Conversion/TritonToStructured/Passes.h.inc"
-
 namespace mlir {
 namespace triton {
 #define GEN_PASS_DEF_TRITONTOSTRUCTURED
@@ -50,8 +47,8 @@ namespace triton {
 namespace {
 
 class TritonToStructuredPass
-    : public triton::impl::TritonToStructuredBase<TritonToStructuredPass> {
-  using TritonToStructuredBase<TritonToStructuredPass>::TritonToStructuredBase;
+    : public mlir::triton::impl::TritonToStructuredBase<TritonToStructuredPass> {
+  using mlir::triton::impl::TritonToStructuredBase<TritonToStructuredPass>::TritonToStructuredBase;
   static TupleType getStructuredStateTupleType(MLIRContext *context, Type t) {
     SmallVector<Type> tupleTypes{t};
     auto [offsetTypes, strideTypes] =

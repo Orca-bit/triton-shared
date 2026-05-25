@@ -34,8 +34,12 @@
 using namespace mlir;
 using namespace triton;
 
-#define GEN_PASS_CLASSES
+namespace mlir {
+namespace triton {
+#define GEN_PASS_DEF_RECONCILEPTRCASTS
 #include "triton-shared/Conversion/TritonToLinalgExperimental/Passes.h.inc"
+} // namespace triton
+} // namespace mlir
 
 namespace {
 
@@ -146,8 +150,9 @@ struct ToMemrefConverter : public OpRewritePattern<UnrealizedConversionCastOp> {
   }
 };
 
-class ReconcilePtrCastsPass
-    : public ReconcilePtrCastsBase<ReconcilePtrCastsPass> {
+class ReconcilePtrCastsPass : public mlir::triton::impl::ReconcilePtrCastsBase<ReconcilePtrCastsPass> {
+public:
+  using mlir::triton::impl::ReconcilePtrCastsBase<ReconcilePtrCastsPass>::ReconcilePtrCastsBase;
 
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -155,18 +160,18 @@ public:
   }
 
   void runOnOperation() override {
-    auto moduleOp = getOperation();
-    RewritePatternSet patterns(&getContext());
+    auto moduleOp = this->getOperation();
+    RewritePatternSet patterns(&this->getContext());
     patterns
         .add<SimplifyUnrealizedCast, FromMemrefConverter, ToMemrefConverter>(
-            &getContext());
+            &this->getContext());
     if (failed(applyPatternsGreedily(moduleOp, std::move(patterns)))) {
-      signalPassFailure();
+      this->signalPassFailure();
     }
   }
 };
 } // namespace
 
-std::unique_ptr<OperationPass<ModuleOp>> triton::createReconcilePtrCastsPass() {
+std::unique_ptr<::mlir::OperationPass<::mlir::ModuleOp>> triton::createReconcilePtrCastsPass() {
   return std::make_unique<ReconcilePtrCastsPass>();
 }

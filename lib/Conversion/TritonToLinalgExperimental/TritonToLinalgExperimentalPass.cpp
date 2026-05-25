@@ -9,6 +9,7 @@
 #include "triton-shared/Conversion/StructuredToMemref/StructuredToMemref.h"
 #include "triton-shared/Conversion/TritonArithToLinalg/TritonArithToLinalg.h"
 #include "triton-shared/Conversion/TritonPtrToMemref/TritonPtrToMemref.h"
+#include "triton-shared/Conversion/TritonToLinalgExperimental/Passes.h"
 #include "triton-shared/Conversion/TritonToLinalgExperimental/CollapseShape.h"
 #include "triton-shared/Conversion/TritonToLinalgExperimental/ReconcilePtrCasts.h"
 #include "triton-shared/Conversion/TritonToLinalgExperimental/TritonToLinalgExperimental.h"
@@ -31,13 +32,18 @@
 using namespace mlir;
 using namespace triton;
 
-#define GEN_PASS_CLASSES
+namespace mlir {
+namespace triton {
+#define GEN_PASS_DEF_TRITONTOLINALGEXPERIMENTAL
 #include "triton-shared/Conversion/TritonToLinalgExperimental/Passes.h.inc"
+} // namespace triton
+} // namespace mlir
 
 namespace {
 
-class TritonToLinalgExperimentalPass
-    : public TritonToLinalgExperimentalBase<TritonToLinalgExperimentalPass> {
+class TritonToLinalgExperimentalPass : public mlir::triton::impl::TritonToLinalgExperimentalBase<TritonToLinalgExperimentalPass> {
+public:
+  using mlir::triton::impl::TritonToLinalgExperimentalBase<TritonToLinalgExperimentalPass>::TritonToLinalgExperimentalBase;
 
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -50,10 +56,10 @@ public:
   }
 
   void runOnOperation() override {
-    auto moduleOp = getOperation();
-    PassManager pm(&getContext(), moduleOp.getOperationName());
+    auto moduleOp = this->getOperation();
+    PassManager pm(&this->getContext(), moduleOp.getOperationName());
 
-    pm.addPass(createTritonToStructuredPass(enableMakeGatherScatterTensorPtr));
+    pm.addPass(createTritonToStructuredPass((bool)this->enableMakeGatherScatterTensorPtr));
 
     // Erase dead code and fold constants created during lowering
     pm.addPass(createCSEPass());
@@ -75,21 +81,21 @@ public:
     pm.addPass(createRemoveDeadValuesPass());
     pm.addPass(createCSEPass());
     pm.addPass(createCanonicalizerPass());
-    if (enableCollapseShape) {
+    if (this->enableCollapseShape) {
       // Canonicalizer pass will rewrite tensor.expand_shape(linalg.fill) to
       // linalg.fill(tensor.expand_shape) so we need to run it before
       // collapseShape pass
       pm.addPass(createCollapseShapePass());
     }
 
-    if (failed(runPipeline(pm, getOperation()))) {
-      signalPassFailure();
+    if (failed(runPipeline(pm, this->getOperation()))) {
+      this->signalPassFailure();
     }
   }
 };
 } // namespace
 
-std::unique_ptr<OperationPass<ModuleOp>>
+std::unique_ptr<::mlir::OperationPass<::mlir::ModuleOp>>
 triton::createTritonToLinalgExperimentalPass() {
   return std::make_unique<TritonToLinalgExperimentalPass>();
 }

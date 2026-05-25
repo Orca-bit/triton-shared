@@ -38,8 +38,12 @@
 using namespace mlir;
 using namespace triton;
 
-#define GEN_PASS_CLASSES
+namespace mlir {
+namespace triton {
+#define GEN_PASS_DEF_UNSTRUCTUREDTOMEMREF
 #include "triton-shared/Conversion/UnstructuredToMemref/Passes.h.inc"
+} // namespace triton
+} // namespace mlir
 
 namespace {
 
@@ -379,7 +383,7 @@ struct ScatterConverter : public OpConversionPattern<tts::ScatterOp> {
 };
 
 class UnstructuredToMemrefPass
-    : public UnstructuredToMemrefBase<UnstructuredToMemrefPass> {
+    : public mlir::triton::impl::UnstructuredToMemrefBase<UnstructuredToMemrefPass> {
 
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -391,10 +395,10 @@ public:
   }
 
   void runOnOperation() override {
-    auto moduleOp = getOperation();
+    auto moduleOp = this->getOperation();
 
-    RewritePatternSet patterns(&getContext());
-    ConversionTarget target(getContext());
+    RewritePatternSet patterns(&this->getContext());
+    ConversionTarget target(this->getContext());
 
     target.addLegalDialect<
         func::FuncDialect, arith::ArithDialect, math::MathDialect,
@@ -411,7 +415,7 @@ public:
                  ScalarStoreConverter>(typeConverter, patterns.getContext());
 
     if (failed(applyPartialConversion(moduleOp, target, std::move(patterns))))
-      signalPassFailure();
+      this->signalPassFailure();
   }
 };
 } // namespace

@@ -77,11 +77,8 @@ memref::SubViewOp MaskState::getSubview(Value source, const Location loc,
   auto sourceType = cast<MemRefType>(source.getType());
   SmallVector<OpFoldResult> offsets(getRank(), builder.getIndexAttr(0));
   SmallVector<OpFoldResult> strides(getRank(), builder.getIndexAttr(1));
-  auto dstType =
-      memref::SubViewOp::inferResultType(sourceType, offsets, dims, strides);
-
-  return builder.create<memref::SubViewOp>(loc, cast<MemRefType>(dstType),
-                                           source, offsets, dims, strides);
+  return builder.create<memref::SubViewOp>(loc, source, offsets, dims,
+                                           strides);
 }
 
 static memref::SubViewOp createSubview(Value src, Location loc, OpBuilder &b,
@@ -89,10 +86,7 @@ static memref::SubViewOp createSubview(Value src, Location loc, OpBuilder &b,
                                        ArrayRef<OpFoldResult> sizes,
                                        ArrayRef<OpFoldResult> strides) {
   auto srcType = cast<MemRefType>(src.getType());
-  auto dstType =
-      memref::SubViewOp::inferResultType(srcType, offsets, sizes, strides);
-  return b.create<memref::SubViewOp>(loc, cast<MemRefType>(dstType), src,
-                                     offsets, sizes, strides);
+  return b.create<memref::SubViewOp>(loc, src, offsets, sizes, strides);
 }
 
 // Assume block1 wraps around and the remainder is block2.

@@ -62,10 +62,14 @@
 
 using namespace mlir;
 
-namespace {
-
+namespace mlir {
+namespace triton {
 #define GEN_PASS_DEF_TRITONTOPTR
 #include "triton-shared/Conversion/TritonToLinalgExperimental/Passes.h.inc"
+} // namespace triton
+} // namespace mlir
+
+namespace {
 
 // Convert tensor.insert_slice to use ptr.ptr type. This insert_slice op must
 // have been lowered from tl.cat
@@ -439,7 +443,9 @@ public:
   }
 };
 
-class TritonToPtrPass : public impl::TritonToPtrBase<TritonToPtrPass> {
+class TritonToPtrPass : public mlir::triton::impl::TritonToPtrBase<TritonToPtrPass> {
+public:
+  using mlir::triton::impl::TritonToPtrBase<TritonToPtrPass>::TritonToPtrBase;
 
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -497,6 +503,6 @@ public:
 };
 } // namespace
 
-std::unique_ptr<OperationPass<ModuleOp>> triton::createTritonToPtrPass() {
+std::unique_ptr<::mlir::OperationPass<::mlir::ModuleOp>> triton::createTritonToPtrPass() {
   return std::make_unique<TritonToPtrPass>();
 }

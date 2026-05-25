@@ -37,8 +37,12 @@
 using namespace mlir;
 using namespace triton;
 
-#define GEN_PASS_CLASSES
+namespace mlir {
+namespace triton {
+#define GEN_PASS_DEF_TRITONPTRTOMEMREF
 #include "triton-shared/Conversion/TritonPtrToMemref/Passes.h.inc"
+} // namespace triton
+} // namespace mlir
 
 namespace {
 
@@ -69,7 +73,7 @@ public:
 };
 
 class TritonPtrToMemrefPass
-    : public TritonPtrToMemrefBase<TritonPtrToMemrefPass> {
+    : public mlir::triton::impl::TritonPtrToMemrefBase<TritonPtrToMemrefPass> {
 
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -80,10 +84,10 @@ public:
   }
 
   void runOnOperation() override {
-    auto moduleOp = getOperation();
+    auto moduleOp = this->getOperation();
 
-    RewritePatternSet patterns(&getContext());
-    ConversionTarget target(getContext());
+    RewritePatternSet patterns(&this->getContext());
+    ConversionTarget target(this->getContext());
     TritonFunctionSignatureConverter typeConverter;
 
     // Update function signature and call ops to use memrefs
@@ -104,14 +108,14 @@ public:
     populateCallOpTypeConversionPattern(patterns, typeConverter);
 
     if (failed(applyPartialConversion(moduleOp, target, std::move(patterns)))) {
-      signalPassFailure();
+      this->signalPassFailure();
     }
 
-    PassManager pm(&getContext(), moduleOp.getOperationName());
+    PassManager pm(&this->getContext(), moduleOp.getOperationName());
     pm.addPass(createCanonicalizerPass());
     pm.addPass(createCSEPass());
-    if (failed(runPipeline(pm, getOperation()))) {
-      signalPassFailure();
+    if (failed(runPipeline(pm, this->getOperation()))) {
+      this->signalPassFailure();
     }
   }
 };

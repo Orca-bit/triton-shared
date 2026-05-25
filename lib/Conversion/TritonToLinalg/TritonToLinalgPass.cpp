@@ -26,8 +26,12 @@
 using namespace mlir;
 using namespace triton;
 
-#define GEN_PASS_CLASSES
+namespace mlir {
+namespace triton {
+#define GEN_PASS_DEF_TRITONTOLINALG
 #include "triton-shared/Conversion/TritonToLinalg/Passes.h.inc"
+} // namespace triton
+} // namespace mlir
 
 namespace {
 
@@ -49,7 +53,7 @@ public:
   }
 };
 
-class TritonToLinalgPass : public TritonToLinalgBase<TritonToLinalgPass> {
+class TritonToLinalgPass : public mlir::triton::impl::TritonToLinalgBase<TritonToLinalgPass> {
 
   static auto constexpr LAUNCH_GRID_RANK = getMaxEnumValForProgramIDDim() + 1;
   static unsigned int constexpr TRITON_PROGRAM_INFO_ARG_COUNT =
@@ -95,24 +99,24 @@ public:
   }
 
   void runOnOperation() override {
-    auto moduleOp = getOperation();
+    auto moduleOp = this->getOperation();
 
     {
-      RewritePatternSet patterns(&getContext());
+      RewritePatternSet patterns(&this->getContext());
       populateTritonToLinalgCanonicalizationPatterns(patterns);
       if (failed(applyPatternsGreedily(moduleOp, std::move(patterns)))) {
-        signalPassFailure();
+        this->signalPassFailure();
       }
     }
 
     moduleOp.walk([this](triton::FuncOp op) {
       if (failed(runUseAnalysis(op))) {
-        signalPassFailure();
+        this->signalPassFailure();
       }
     });
 
-    RewritePatternSet patterns(&getContext());
-    ConversionTarget target(getContext());
+    RewritePatternSet patterns(&this->getContext());
+    ConversionTarget target(this->getContext());
     TritonTypeConverter tritonTypeConverter;
 
     target.addLegalDialect<
@@ -178,11 +182,11 @@ public:
     triton::populateTritonToLinalgConversionPatterns(
         tritonTypeConverter, patterns, LAUNCH_GRID_RANK);
 
-    for (auto func : getOperation().getOps<triton::FuncOp>())
+    for (auto func : this->getOperation().getOps<triton::FuncOp>())
       addProgramInfo(func);
 
     if (failed(applyPartialConversion(moduleOp, target, std::move(patterns))))
-      signalPassFailure();
+      this->signalPassFailure();
 
     // Convert tt.func and tt.return into func's counterparts
     moduleOp.walk([&](triton::FuncOp func) {
@@ -215,10 +219,10 @@ public:
     });
 
     // Erase dead code and fold constants created during lowering
-    PassManager pm(&getContext(), moduleOp.getOperationName());
+    PassManager pm(&this->getContext(), moduleOp.getOperationName());
     pm.addPass(createCanonicalizerPass());
-    if (failed(runPipeline(pm, getOperation()))) {
-      signalPassFailure();
+    if (failed(runPipeline(pm, this->getOperation()))) {
+      this->signalPassFailure();
     }
   }
 };

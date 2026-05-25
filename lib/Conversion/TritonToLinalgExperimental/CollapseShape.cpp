@@ -34,8 +34,12 @@
 using namespace mlir;
 using namespace triton;
 
-#define GEN_PASS_CLASSES
+namespace mlir {
+namespace triton {
+#define GEN_PASS_DEF_COLLAPSESHAPE
 #include "triton-shared/Conversion/TritonToLinalgExperimental/Passes.h.inc"
+} // namespace triton
+} // namespace mlir
 
 namespace {
 
@@ -485,7 +489,9 @@ struct CollapseReduce : public OpRewritePattern<linalg::ReduceOp> {
   }
 };
 
-class CollapseShapePasss : public CollapseShapeBase<CollapseShapePasss> {
+class CollapseShapePass : public mlir::triton::impl::CollapseShapeBase<CollapseShapePass> {
+public:
+  using mlir::triton::impl::CollapseShapeBase<CollapseShapePass>::CollapseShapeBase;
 
 public:
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -493,19 +499,19 @@ public:
   }
 
   void runOnOperation() override {
-    auto moduleOp = getOperation();
-    RewritePatternSet patterns(&getContext());
+    auto moduleOp = this->getOperation();
+    RewritePatternSet patterns(&this->getContext());
     patterns.add<CollapseFill, CollapseBroadCast, CollapseTranspose,
-                 CollapseReduce>(&getContext());
+                 CollapseReduce>(&this->getContext());
     if (failed(applyPatternsGreedily(moduleOp, std::move(patterns)))) {
-      signalPassFailure();
+      this->signalPassFailure();
     }
   }
 };
 
 } // namespace
 
-std::unique_ptr<OperationPass<ModuleOp>>
+std::unique_ptr<::mlir::OperationPass<::mlir::ModuleOp>>
 mlir::triton::createCollapseShapePass() {
-  return std::make_unique<CollapseShapePasss>();
+  return std::make_unique<CollapseShapePass>();
 }
